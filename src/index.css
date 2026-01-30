@@ -10,13 +10,13 @@
 @layer base {
   :root {
     /* Cores principais - paleta divertida */
-    --background: 45 100% 96%;
+    --background: 120 60% 92%;
     --foreground: 25 30% 20%;
 
-    --card: 45 100% 99%;
+    --card: 120 60% 98%;
     --card-foreground: 25 30% 20%;
 
-    --popover: 45 100% 99%;
+    --popover: 120 60% 98%;
     --popover-foreground: 25 30% 20%;
 
     /* Amarelo torta - cor principal */
@@ -28,7 +28,7 @@
     --secondary-foreground: 0 0% 100%;
 
     /* Tons suaves */
-    --muted: 45 40% 90%;
+    --muted: 120 40% 88%;
     --muted-foreground: 25 20% 45%;
 
     /* Verde menta - accent */
@@ -38,8 +38,8 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 45 30% 85%;
-    --input: 45 30% 88%;
+    --border: 120 25% 82%;
+    --input: 120 25% 86%;
     --ring: 340 85% 60%;
 
     --radius: 1rem;
@@ -47,20 +47,20 @@
     /* Gradientes */
     --gradient-fun: linear-gradient(135deg, hsl(45, 95%, 55%) 0%, hsl(35, 95%, 60%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(340, 85%, 60%) 0%, hsl(320, 80%, 55%) 100%);
-    --gradient-background: linear-gradient(180deg, hsl(45, 100%, 96%) 0%, hsl(40, 80%, 92%) 100%);
+    --gradient-background: linear-gradient(180deg, hsl(120, 60%, 94%) 0%, hsl(120, 45%, 88%) 100%);
 
     /* Sombras */
     --shadow-card: 0 8px 32px -8px hsl(45 50% 50% / 0.25);
     --shadow-button: 0 4px 16px -4px hsl(340 85% 60% / 0.4);
     --shadow-fun: 0 12px 40px -12px hsl(45 95% 55% / 0.5);
 
-    --sidebar-background: 45 100% 98%;
+    --sidebar-background: 120 60% 96%;
     --sidebar-foreground: 25 30% 30%;
     --sidebar-primary: 340 85% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 45 60% 90%;
+    --sidebar-accent: 120 35% 88%;
     --sidebar-accent-foreground: 25 30% 20%;
-    --sidebar-border: 45 30% 85%;
+    --sidebar-border: 120 25% 82%;
     --sidebar-ring: 340 85% 60%;
   }
 

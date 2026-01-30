@@ -13,9 +13,19 @@ interface QuestionRequest {
 }
 
 interface GeneratedQuestion {
+  question?: string;
+  answer?: string;
+  pergunta?: string;
+  resposta?: string;
+}
+
+interface StoredQuestion {
+  id: string;
   pergunta: string;
   resposta: string;
 }
+
+const normalizeText = (value: string) => value.trim().toLowerCase();
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -31,41 +41,54 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if there are unused questions for this combination
-    const { data: existingQuestions, error: fetchError } = await supabase
-      .from('perguntas')
-      .select('id, pergunta, resposta')
-      .eq('tema', theme)
-      .eq('nivel', difficulty)
-      .eq('faixa_etaria', ageGroup)
-      .eq('usada', false)
-      .limit(1);
+    const getNextUnusedQuestion = async (): Promise<StoredQuestion | null> => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const { data: candidate, error: fetchError } = await supabase
+          .from('perguntas')
+          .select('id, pergunta, resposta')
+          .eq('tema', theme)
+          .eq('nivel', difficulty)
+          .eq('faixa_etaria', ageGroup)
+          .eq('usada', false)
+          .order('criada_em', { ascending: true })
+          .limit(1)
+          .maybeSingle();
 
-    if (fetchError) {
-      console.error("Error fetching questions:", fetchError);
-      throw new Error("Erro ao buscar perguntas do banco");
-    }
+        if (fetchError) {
+          console.error("Error fetching questions:", fetchError);
+          throw new Error("Erro ao buscar perguntas do banco");
+        }
 
-    // If there's an unused question, return it and mark as used
-    if (existingQuestions && existingQuestions.length > 0) {
-      const question = existingQuestions[0];
-      
-      // Mark as used
-      const { error: updateError } = await supabase
-        .from('perguntas')
-        .update({ usada: true })
-        .eq('id', question.id);
+        if (!candidate) {
+          return null;
+        }
 
-      if (updateError) {
-        console.error("Error marking question as used:", updateError);
+        const { data: updated, error: updateError } = await supabase
+          .from('perguntas')
+          .update({ usada: true })
+          .eq('id', candidate.id)
+          .eq('usada', false)
+          .select('id, pergunta, resposta')
+          .single();
+
+        if (!updateError && updated) {
+          return updated as StoredQuestion;
+        }
+
+        console.warn("Question was already used, retrying...", updateError);
       }
 
-      console.log("Returning existing question from database:", question.id);
-      
+      return null;
+    };
+
+    const existingQuestion = await getNextUnusedQuestion();
+
+    if (existingQuestion) {
+      console.log("Returning existing question from database:", existingQuestion.id);
       return new Response(
         JSON.stringify({
-          pergunta: question.pergunta,
-          resposta: question.resposta,
+          pergunta: existingQuestion.pergunta,
+          resposta: existingQuestion.resposta,
           fromCache: true
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -116,8 +139,8 @@ REGRAS IMPORTANTES:
 
 Responda EXATAMENTE neste formato JSON (array de 20 objetos):
 [
-  {"pergunta": "texto da pergunta 1", "resposta": "resposta 1"},
-  {"pergunta": "texto da pergunta 2", "resposta": "resposta 2"},
+  {"question": "texto da pergunta 1", "answer": "resposta 1"},
+  {"question": "texto da pergunta 2", "answer": "resposta 2"},
   ...
 ]`;
 
@@ -188,16 +211,40 @@ Responda EXATAMENTE neste formato JSON (array de 20 objetos):
     }
     jsonContent = jsonContent.trim();
 
-    const questions: GeneratedQuestion[] = JSON.parse(jsonContent);
+    const rawQuestions: GeneratedQuestion[] = JSON.parse(jsonContent);
 
-    if (!Array.isArray(questions) || questions.length === 0) {
+    if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
       throw new Error("Invalid response format from AI");
     }
 
-    console.log(`Parsed ${questions.length} questions, saving to database...`);
+    const uniqueQuestions: GeneratedQuestion[] = [];
+    const seenQuestions = new Set<string>();
+
+    for (const item of rawQuestions) {
+      const pergunta = item.question ?? item.pergunta;
+      const resposta = item.answer ?? item.resposta;
+
+      if (!pergunta || !resposta) {
+        continue;
+      }
+
+      const normalized = normalizeText(pergunta);
+      if (seenQuestions.has(normalized)) {
+        continue;
+      }
+
+      seenQuestions.add(normalized);
+      uniqueQuestions.push({ pergunta, resposta });
+    }
+
+    if (uniqueQuestions.length === 0) {
+      throw new Error("Nenhuma pergunta válida foi gerada.");
+    }
+
+    console.log(`Parsed ${uniqueQuestions.length} unique questions, saving to database...`);
 
     // Save all questions to database
-    const questionsToInsert = questions.map(q => ({
+    const questionsToInsert = uniqueQuestions.map(q => ({
       tema: theme,
       nivel: difficulty,
       faixa_etaria: ageGroup,
@@ -206,9 +253,10 @@ Responda EXATAMENTE neste formato JSON (array de 20 objetos):
       usada: false
     }));
 
-    const { error: insertError } = await supabase
+    const { data: insertedQuestions, error: insertError } = await supabase
       .from('perguntas')
-      .insert(questionsToInsert);
+      .insert(questionsToInsert)
+      .select('id, pergunta, resposta');
 
     if (insertError) {
       console.error("Error inserting questions:", insertError);
@@ -218,33 +266,21 @@ Responda EXATAMENTE neste formato JSON (array de 20 objetos):
     console.log("Questions saved successfully!");
 
     // Return the first question and mark it as used
-    const firstQuestion = questions[0];
-    
-    // Get the ID of the first inserted question and mark as used
-    const { data: insertedQuestion, error: getError } = await supabase
-      .from('perguntas')
-      .select('id')
-      .eq('tema', theme)
-      .eq('nivel', difficulty)
-      .eq('faixa_etaria', ageGroup)
-      .eq('pergunta', firstQuestion.pergunta)
-      .eq('usada', false)
-      .limit(1)
-      .single();
+    const firstInserted = insertedQuestions?.[0];
 
-    if (!getError && insertedQuestion) {
+    if (firstInserted?.id) {
       await supabase
         .from('perguntas')
         .update({ usada: true })
-        .eq('id', insertedQuestion.id);
+        .eq('id', firstInserted.id);
     }
 
     return new Response(
       JSON.stringify({
-        pergunta: firstQuestion.pergunta,
-        resposta: firstQuestion.resposta,
+        pergunta: firstInserted?.pergunta ?? uniqueQuestions[0].pergunta,
+        resposta: firstInserted?.resposta ?? uniqueQuestions[0].resposta,
         fromCache: false,
-        batchGenerated: questions.length
+        batchGenerated: uniqueQuestions.length
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
