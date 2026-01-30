@@ -13,7 +13,7 @@ const Index = () => {
   const [difficulty, setDifficulty] = useState("medio");
   const [ageGroup, setAgeGroup] = useState("adulto");
 
-  const { question, isLoading, generateQuestion } = useQuestionGenerator();
+  const { question, isLoading, stats, generateQuestion } = useQuestionGenerator();
 
   const handleGenerate = () => {
     generateQuestion({ theme, difficulty, ageGroup });
@@ -50,7 +50,7 @@ const Index = () => {
             ) : question ? (
               <>
                 <RefreshCw className="mr-3 h-6 w-6" />
-                Gerar Nova Pergunta
+                Próxima Pergunta
               </>
             ) : (
               <>
@@ -63,10 +63,17 @@ const Index = () => {
 
         {/* Question Display */}
         {question && (
-          <QuestionCard 
-            pergunta={question.pergunta} 
-            resposta={question.resposta} 
-          />
+          <div className="space-y-4">
+            <QuestionCard 
+              pergunta={question.pergunta} 
+              resposta={question.resposta} 
+            />
+            {stats && (
+              <p className="text-center text-sm text-muted-foreground">
+                {stats.fromCache ? "📦 Do estoque" : `✨ Lote de ${stats.batchGenerated} perguntas gerado`}
+              </p>
+            )}
+          </div>
         )}
 
         {/* Loading State */}

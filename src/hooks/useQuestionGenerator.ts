@@ -13,13 +13,20 @@ interface GenerateParams {
   ageGroup: string;
 }
 
+interface QuestionStats {
+  fromCache: boolean;
+  batchGenerated?: number;
+}
+
 export function useQuestionGenerator() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [stats, setStats] = useState<QuestionStats | null>(null);
 
   const generateQuestion = async ({ theme, difficulty, ageGroup }: GenerateParams) => {
     setIsLoading(true);
     setQuestion(null);
+    setStats(null);
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-question', {
@@ -38,6 +45,19 @@ export function useQuestionGenerator() {
         pergunta: data.pergunta,
         resposta: data.resposta,
       });
+
+      setStats({
+        fromCache: data.fromCache || false,
+        batchGenerated: data.batchGenerated
+      });
+
+      // Show info toast about batch generation
+      if (data.batchGenerated) {
+        toast({
+          title: "Lote gerado! 🎲",
+          description: `${data.batchGenerated} novas perguntas prontas para o jogo!`,
+        });
+      }
 
     } catch (error) {
       console.error("Error generating question:", error);
@@ -66,11 +86,13 @@ export function useQuestionGenerator() {
 
   const clearQuestion = () => {
     setQuestion(null);
+    setStats(null);
   };
 
   return {
     question,
     isLoading,
+    stats,
     generateQuestion,
     clearQuestion,
   };
