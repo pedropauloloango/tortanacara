@@ -5,6 +5,7 @@ import { ThemeSelect } from "@/components/ThemeSelect";
 import { DifficultySelect } from "@/components/DifficultySelect";
 import { AgeGroupSelect } from "@/components/AgeGroupSelect";
 import { QuestionCard } from "@/components/QuestionCard";
+import { ResetQuestionsDialog } from "@/components/ResetQuestionsDialog";
 import { useQuestionGenerator } from "@/hooks/useQuestionGenerator";
 import { Sparkles, RefreshCw, Loader2 } from "lucide-react";
 
@@ -99,8 +100,11 @@ const Index = () => {
         )}
 
         {/* Footer */}
-        <footer className="text-center text-sm text-muted-foreground pt-8">
-          <p>Perguntas geradas por IA • Divirta-se com responsabilidade! 🎉</p>
+        <footer className="text-center space-y-4 pt-8">
+          <ResetQuestionsDialog />
+          <p className="text-sm text-muted-foreground">
+            Perguntas geradas por IA • Divirta-se com responsabilidade! 🎉
+          </p>
         </footer>
       </div>
     </div>
