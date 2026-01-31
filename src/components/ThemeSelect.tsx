@@ -23,6 +23,7 @@ const themes = [
   { value: "filmes", label: "🎬 Filmes" },
   { value: "animais", label: "🐾 Animais" },
   { value: "esportes", label: "🏆 Esportes" },
+  { value: "matematica", label: "🧮 Matemática e Raciocínio Lógico" },
 ];
 
 export function ThemeSelect({ value, onValueChange }: ThemeSelectProps) {
